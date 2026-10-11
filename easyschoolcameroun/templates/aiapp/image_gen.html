@@ -1,0 +1,92 @@
+{% extends 'dash/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="mdk-drawer-layout__content page-content">
+    <div class="container-fluid">
+        <h1 class="h2">Générateur d'Images AI</h1>
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex align-items-center">
+                    <div class="flex">
+                        <h4 class="card-title">Générer une image</h4>
+                        <p class="card-subtitle text-muted">Crédits Journaliers: <span id="daily-credits">{{ daily_credits }}</span> | Portefeuille: <span id="wallet-credits">{{ wallet_credits }}</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                 <form id="image-form">
+                    <div class="form-group">
+                        <label for="prompt">Description de l'image (Prompt)</label>
+                        <textarea class="form-control" id="prompt" rows="3" placeholder="Un chat astronaute sur la lune..."></textarea>
+                        <small class="form-text text-muted">Coût: 10 crédits par image.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="generate-btn">Générer</button>
+                </form>
+                
+                <div class="mt-4 text-center" id="result-area" style="display: none;">
+                    <h5>Résultat :</h5>
+                    <img id="generated-image" src="" alt="Generated Image" class="img-fluid rounded shadow-lg" style="max-height: 400px;">
+                </div>
+                <div id="loading-area" class="mt-4 text-center" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Chargement...</span>
+                    </div>
+                    <p>Création de votre chef-d'œuvre en cours...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const imageForm = document.getElementById('image-form');
+    const promptInput = document.getElementById('prompt');
+    const resultArea = document.getElementById('result-area');
+    const generatedImage = document.getElementById('generated-image');
+    const loadingArea = document.getElementById('loading-area');
+    const generateBtn = document.getElementById('generate-btn');
+    const dailyCreditsSpan = document.getElementById('daily-credits');
+    const walletCreditsSpan = document.getElementById('wallet-credits');
+
+    imageForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const prompt = promptInput.value;
+        if (!prompt) return;
+
+        resultArea.style.display = 'none';
+        loadingArea.style.display = 'block';
+        generateBtn.disabled = true;
+
+        fetch("{% url 'aiapp:image_gen' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ prompt: prompt })
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingArea.style.display = 'none';
+            generateBtn.disabled = false;
+            
+            if (data.error) {
+                alert('Erreur: ' + data.error);
+            } else {
+                generatedImage.src = data.image_url;
+                resultArea.style.display = 'block';
+                dailyCreditsSpan.innerText = data.daily_credits;
+                walletCreditsSpan.innerText = data.wallet_credits;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            loadingArea.style.display = 'none';
+            generateBtn.disabled = false;
+            alert('Erreur de connexion.');
+        });
+    });
+</script>
+{% endblock %}
